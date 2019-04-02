@@ -1,28 +1,73 @@
-import React, { Component } from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React from "react";
+import {
+    BrowserRouter as Router,
+    Route,
+    Link,
+    Switch,
+    Redirect
+} from "react-router-dom";
+import Home from './routes/Home';
+import Login from './routes/Login';
+import NoMatch from './routes/components/NoMatch';
+import axios from 'axios';
 
-class App extends Component {
-  render() {
-    return (
-      <div className="App">
-        <header className="App-header">
-          <img src={logo} className="App-logo" alt="logo" />
-          <p>
-            Edit <code>src/App.js</code> and save to reload.
-          </p>
-          <a
-            className="App-link"
-            href="https://reactjs.org"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Learn React
-          </a>
-        </header>
-      </div>
-    );
-  }
+
+
+export default class AppRouter extends React.Component {
+    constructor(){
+        super()
+        this.state={
+            logedIn: false
+        }
+        this.checkLogedin()
+    }
+
+    checkLogedin = () => {
+        let token = localStorage.getItem("token")
+        if(token){
+            axios({
+                method: "POST",
+                url: 'https://baomoi.press/wp-json/jwt-auth/v1/token/validate',
+                headers: {'Authorization': 'Bearer ' + token},
+            })
+            .then(res => {
+                if(res.status == 200){
+                    this.setState({
+                        logedIn: true,
+                    })
+                }else{
+                    localStorage.clear()
+                    this.setState({
+                        logedIn: false
+                    })
+                }
+            })
+            .catch(err => console.log(err))
+        }
+    }
+
+    render(){
+        return(
+            <Router>
+                <Switch>
+                    <Route
+                        exact path="/"
+                        render={() => (localStorage.getItem("token"))?
+                            <Redirect to="/home/dashboard"/> :
+                            <Redirect to="/login"/>
+                        }
+                    />
+                    <Route
+                        path='/home'
+                        component={Home}
+                    />
+                    <Route path='/login' component={Login}/>
+                    <Route component={NoMatch} />
+                </Switch>
+            </Router>
+
+        )
+    }
+
+
 }
-
-export default App;
