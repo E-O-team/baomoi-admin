@@ -11,6 +11,8 @@ import {
     Send
 } from 'grommet-icons';
 import axios from 'axios';
+import * as Datetime from 'react-datetime';
+import './styles/date-time.css'
 class NotificationCenter extends React.Component {
 
     constructor(props){
@@ -26,6 +28,7 @@ class NotificationCenter extends React.Component {
             slug: "",
             status: "",
             postID: "",
+            date: new Date(),
         }
     }
 
@@ -93,6 +96,16 @@ class NotificationCenter extends React.Component {
         this.checkNoti()
     }
 
+    renderInput = (props, openCalendar, closeCalendar) => {
+        function clear(){
+           props.onChange({target: {value: ''}});
+       }
+       return (
+           <TextInput {...props} placeholder="thời gian đăng" />
+
+       );
+    }
+
     render() {
 
         return (
@@ -103,17 +116,20 @@ class NotificationCenter extends React.Component {
             >
                 <Box direction="row" align="center" gap="small">
                     <Notification color="brand"/>
-                    <h1>Tạo thông báo bài viết</h1>
+                    <h1>Tạo thông báo bài viết nổi bật</h1>
                 </Box>
-                <Box pad="large" gap="medium" >
-                    <Box width="large">
-                        <TextInput
-                            placeholder="tiêu đề"
-                            focusIndicator="true"
-                            size="small"
-                            value={this.state.title}
-                            onChange={(e) => this.setState({title: e.target.value})}
-                        />
+                <Box pad="medium" gap="medium" >
+                    <Box direction="row" align="center" gap="medium">
+                        <Box width="large">
+                            <TextInput
+                                placeholder="tiêu đề"
+                                focusIndicator="true"
+                                size="small"
+                                value={this.state.title}
+                                onChange={(e) => this.setState({title: e.target.value})}
+                            />
+                        </Box>
+                        <Datetime renderInput={ this.renderInput } value={this.state.date} onChange={(newDate) => this.setState({date: newDate})}/>
                     </Box>
                     <Box height="medium">
                         <TextArea
@@ -171,6 +187,7 @@ class NotificationCenter extends React.Component {
                             <h2>{this.state.status}</h2>
 
                     </Box>
+
                     <Box align="end" >
                         <Box width="small">
                             <Button

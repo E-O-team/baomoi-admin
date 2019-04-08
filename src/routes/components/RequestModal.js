@@ -9,14 +9,15 @@ import {
 import Expo from 'expo-server-sdk';
 import axios from 'axios';
 const customStyles = {
-  content : {
-    top                   : '50%',
-    left                  : '50%',
-    right                 : 'auto',
-    bottom                : 'auto',
-    marginRight           : '-50%',
-    transform             : 'translate(-50%, -50%)'
-  }
+    content : {
+        height: "550px",
+        top                   : '50%',
+        left                  : '50%',
+        right                 : 'auto',
+        bottom                : 'auto',
+        marginRight           : '-50%',
+        transform             : 'translate(-50%, -50%)'
+    }
 };
 Modal.setAppElement('#root');
 
@@ -29,21 +30,30 @@ class RequestModal extends Component {
             code: "",
             series_number: "",
             token: localStorage.getItem("token"),
-            buttonLabel: "gửi"
+            sendButtonLabel: "duyệt",
+            refuseButtonLabel: "từ chối"
         };
 
     }
 
-    sendUserNoti = (userID) => {
+    sendUserNoti = (userID, action) => {
         axios.get("https://baomoi.press/wp-json/acf/v3/users/" + userID + "/deviceToken")
         .then(res => {
             const deviceToken = res.data.deviceToken;
-            this.checkNoti(deviceToken)
+            this.checkNoti(deviceToken, action)
         })
         .catch(err => console.log(err))
     }
 
-    checkNoti = (deviceToken) => {
+    checkNoti = (deviceToken, action) => {
+        console.log(action);
+        if(action == "duyệt"){
+            var title = "Yêu cầu đổi thẻ đã được duyệt!"
+            var body = "Hãy vào ngay mục lịch sử đổi thẻ để nhận thẻ"
+        }else if (action == "từ chối") {
+            var title = "Yêu cầu đổi thẻ đã bị từ chối!"
+            var body = "Yêu cầu của bạn đã bị từ chối do vi phạm điều khoản thanh toán của chúng tôi"
+        }
         // Create a new Expo SDK client
         let expo = new Expo();
 
@@ -63,9 +73,12 @@ class RequestModal extends Component {
                 to: pushToken,
                 sound: 'default',
                 priority: "default",
-                title: "Yêu cầu đổi thẻ đã được duyệt!",
-                body: "Hãy vào ngay mục lịch sử đổi thẻ để nhận thẻ",
-                data: { withSome: 'data' },
+                title: title,
+                body: body,
+                data: {
+                    title: title,
+                    body: body,
+                },
             })
         }
 
@@ -90,30 +103,63 @@ class RequestModal extends Component {
         })();
     }
 
-    handleSend = () => {
-        this.setState({buttonLabel: "loading..."})
-        const {id, userID} = this.props.data.original
-        this.sendUserNoti(userID)
-        const data = new FormData()
-        data.append("fields[card_code]", this.state.code)
-        data.append("fields[request_status]", "đã duyệt")
-        data.append("fields[series_number]", this.state.series_number)
-        axios({
-            method: "POST",
-            url: 'https://baomoi.press/wp-json/acf/v3/cardrequest/' + id,
-            headers: {'Authorization': 'Bearer ' + this.state.token},
-            data: data
-        })
-
-        .then(res => {
-            if(res.status == 200){
-                this.setState({
-                    buttonLabel: "đã xong"
+    handleSend = (action) => {
+        const {code, series_number} = this.state
+        // ACCEPT REQUESTS
+        if(action == "duyệt"){
+            if(code !== "" && series_number!== ""){
+                this.setState({sendButtonLabel: "loading..."})
+                const {id, userID} = this.props.data.original
+                this.sendUserNoti(userID, action)
+                const data = new FormData()
+                data.append("fields[card_code]", this.state.code)
+                data.append("fields[request_status]", "đã duyệt")
+                data.append("fields[series_number]", this.state.series_number)
+                data.append("status", "publish")
+                axios({
+                    method: "POST",
+                    url: 'https://baomoi.press/wp-json/acf/v3/cardrequest/' + id,
+                    headers: {'Authorization': 'Bearer ' + this.state.token},
+                    data: data
                 })
+
+                .then(res => {
+                    if(res.status == 200){
+                        this.setState({
+                            sendButtonLabel: "đã xong"
+                        })
+                    }
+                })
+                .catch(err => console.log(err))
+            }else{
+                alert("Xin hãy điền tất cả các trường!")
             }
-        })
-        .catch(err => console.log(err))
+
+        }else if (action == "từ chối") {
+            this.setState({refuseButtonLabel: "loading..."})
+            const {id, userID} = this.props.data.original
+            this.sendUserNoti(userID, action)
+            const data = new FormData()
+            data.append("fields[request_status]", "Bị từ chối")
+            axios({
+                method: "POST",
+                url: 'https://baomoi.press/wp-json/acf/v3/cardrequest/' + id,
+                headers: {'Authorization': 'Bearer ' + this.state.token},
+                data: data
+            })
+
+            .then(res => {
+                if(res.status == 200){
+                    this.setState({
+                        refuseButtonLabel: "đã xong"
+                    })
+                }
+            })
+            .catch(err => console.log(err))
+        }
+
     }
+
 
     render() {
         const {openModal, closeModal, afterOpenModal, data} = this.props
@@ -128,10 +174,10 @@ class RequestModal extends Component {
                     contentLabel="Example Modal"
                 >
                     <Box
-                        pad="medium"
+                        pad="small"
                     >
                         <FormField label="Xác nhận yêu cầu đổi thẻ"></FormField>
-                        <Box pad="medium" gap="small">
+                        <Box pad="medium" gap="xsmall">
                             <Box direction="row">
                                 <FormField label="ID giao dịch">
                                     <TextInput value={id} ></TextInput>
@@ -140,23 +186,23 @@ class RequestModal extends Component {
                                     <TextInput value={userID} ></TextInput>
                                 </FormField>
                             </Box>
-                            <FormField label="Mệnh giá">
-                                <TextInput value={price} ></TextInput>
-                            </FormField>
-                            <FormField label="Nhà mạng">
-                                <TextInput value={carrier} ></TextInput>
-                            </FormField>
-                            <FormField label="Báo cáo">
-                                <TextInput value={report} ></TextInput>
-                            </FormField>
+                            <Box direction="row">
+                                <FormField label="Mệnh giá">
+                                    <TextInput value={price} ></TextInput>
+                                </FormField>
+                                <FormField label="Nhà mạng">
+                                    <TextInput value={carrier} ></TextInput>
+                                </FormField>
+                            </Box>
                             <FormField label="Mã thẻ cào">
                                 <TextInput value={this.state.code} onChange={(e) => this.setState({code: e.target.value})} ></TextInput>
                             </FormField>
                             <FormField label="Số seri">
                                 <TextInput value={this.state.series_number} onChange={(e) => this.setState({series_number: e.target.value})} ></TextInput>
                             </FormField>
-                            <Box pad="medium" align="end">
-                                <Button label={this.state.buttonLabel} color="brand" onClick={this.handleSend}/>
+                            <Box pad="medium" gap="medium" align="end" direction="row">
+                                <Button label={this.state.sendButtonLabel} color="brand" onClick={() => this.handleSend("duyệt")}/>
+                                <Button label={this.state.refuseButtonLabel} color="brand" onClick={() => this.handleSend("từ chối")}/>
                             </Box>
 
 

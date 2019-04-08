@@ -17,7 +17,6 @@ import {
 } from 'grommet-icons';
 import ReactTable from 'react-table';
 import 'react-table/react-table.css'
-import {TableData} from './data';
 import RequestModal from './RequestModal';
 import axios from 'axios';
 const columns = [{
@@ -54,13 +53,19 @@ class Requests extends Component {
             buttonDisabled: false,
         }
         this.fetchRequests()
+
     }
 
-    fetchRequests = () => {
+    fetchRequests = async() => {
+        var token = localStorage.getItem("token")
         this.setState({
-            buttonDisabled: true
+            buttonDisabled: true,
         })
-        axios.get("https://baomoi.press/wp-json/wp/v2/cardrequest")
+        axios({
+            method: "GET",
+            url: 'https://baomoi.press/wp-json/wp/v2/cardrequest?status=draft, publish',
+            headers: {'Authorization': 'Bearer ' + token},
+        })
         .then(res => {
             const data = res.data.map((request, index) => {
                 return {
