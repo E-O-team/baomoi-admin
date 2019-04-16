@@ -18,10 +18,10 @@ class NotificationCenter extends React.Component {
     constructor(props){
         super(props)
         this.state={
-            tokens: [
-                "ExponentPushToken[m46rkzF63XLq2XmZWUM4RC]",
-                "ExponentPushToken[JwBUKJFRaChI9kXzh13Etc]"
-            ],
+            tokens: [],
+            tokenGot: [],
+            fetchingToken: "Đang lấy token từ user...",
+            page: 1,
             title: "",
             body: "",
             url: "",
@@ -30,11 +30,43 @@ class NotificationCenter extends React.Component {
             postID: "",
             date: new Date(),
         }
+        this.getAllDeviceTokens()
     }
 
-    // getTokens = () => {
-    //
-    // }
+
+    getAllDeviceTokens = () => {
+        const getDeviceTokens = () => {
+            var token = localStorage.getItem("token")
+            axios({
+                method: "GET",
+                url: 'https://baomoi.press/wp-json/wp/v2/users?per_page=100&page=' + this.state.page,
+                headers: {'Authorization': 'Bearer ' + token},
+            })
+            .then(res => {
+                if(res.data.length > 0){
+                    console.log("running on: " + this.state.page + " time");
+                    let usersWithTokens = res.data.filter(user => {
+                        if(user.acf.deviceToken){
+                            return user.acf.deviceToken
+                        }
+                    })
+                    var deviceTokens = usersWithTokens.map(user => user.acf.deviceToken)
+                    console.log(deviceTokens);
+                    this.setState({
+                        tokens: [...this.state.tokens, ...deviceTokens],
+                        page: this.state.page+1,
+                    }, () => getDeviceTokens())
+                }else{
+                    this.setState({
+                        fetchingToken: "Đã lấy xong token!"
+                    })
+                }
+            })
+            .catch(err => console.log(err))
+        }
+        return getDeviceTokens()
+
+    }
 
     checkNoti = async() => {
         const {title, body, url, slug, postID} = this.state
@@ -63,7 +95,11 @@ class NotificationCenter extends React.Component {
                     sound: 'default',
                     title: this.state.title,
                     body: this.state.body,
-                    data: {postID: this.state.postID}
+                    data: {
+                        postID: this.state.postID,
+                        title: this.state.title,
+                        body: this.state.body,
+                    }
                 })
             }
 
@@ -114,9 +150,12 @@ class NotificationCenter extends React.Component {
                 fill={true}
                 pad="medium"
             >
-                <Box direction="row" align="center" gap="small">
-                    <Notification color="brand"/>
-                    <h1>Tạo thông báo bài viết nổi bật</h1>
+                <Box direction="row" align="center" justify="between">
+                    <Box direction="row" gap="small">
+                        <Notification color="brand"/>
+                        <h1>Tạo thông báo bài viết nổi bật</h1>
+                    </Box>
+                    <h1>{this.state.fetchingToken}</h1>
                 </Box>
                 <Box pad="medium" gap="medium" >
                     <Box direction="row" align="center" gap="medium">
